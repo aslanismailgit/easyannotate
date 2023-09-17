@@ -38,6 +38,10 @@ https://github.com/facebookresearch/segment-anything#model-checkpoints
 
 reload image if required
 
+<img src="screens/screen1.png" alt="Image 1" width="600" />
+<img src="screens/screen2.png" alt="Image 1" width="600" />
+<img src="screens/screen3.png" alt="Image 1" width="600" />
+<img src="screens/screen4.png" alt="Image 1" width="600" />
 
 
 ## Contributing
