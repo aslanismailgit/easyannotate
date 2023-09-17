@@ -2,7 +2,7 @@
 
 Annotating images for segmentation tasks can be a cumbersome process. This UI is created to simplify image annotation using Segment Anything Model (SAM). Easy annotate takes both point input and bounding box formats to create masks.
 
-In this repository, I get the user input either in the form of input point or bounding boxes, create masks using SAM, and then save the resulting binary masks for selected objects. These binary masks can serve as a foundation for various custom segmentation tasks, and you can derive other formats from them as needed.
+In this repository, I get the user input either in the form of input point or bounding boxes, create masks using SAM, and then save the resulting masks for selected objects. These masks can serve as a foundation for various custom segmentation tasks, and you can derive other formats from them as needed.
 
 ## Features
 
