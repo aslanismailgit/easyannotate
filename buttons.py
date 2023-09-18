@@ -115,7 +115,7 @@ class RightButtons:
                                           command=self.image_viewer.load_old_class_list)
         self.load_old_folders_button.pack(side=tk.TOP, pady=10)
 
-        self.load_saved_masks_button = tk.Button(self.frame, text="Load Saved Masks", 
-                                          command=self.image_viewer.load_masked_points)
-        self.load_saved_masks_button.pack(side=tk.TOP, pady=10)
+        # self.load_saved_masks_button = tk.Button(self.frame, text="Load Saved Masks", 
+        #                                   command=self.image_viewer.load_masked_points)
+        # self.load_saved_masks_button.pack(side=tk.TOP, pady=10)
 
