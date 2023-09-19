@@ -88,6 +88,8 @@ class ImageViewer:
         # Bind the canvas click event to the capture_click function
         self.canvas.bind("<Button-1>", self.capture_click)
 
+        self.canvas.bind("<Motion>", self.on_mouse_move)
+
     def reset_variables(self):
         # Reset variables
         self.zoom_factor = 1.0
@@ -149,6 +151,12 @@ class ImageViewer:
             if new_y_position <= 0 and new_y_position >= max_scrollable_y:
                 self.y_position = new_y_position
                 self.update_image()
+
+    def on_mouse_move(self, event):
+        self.canvas.delete("lines")
+        x, y = event.x, event.y
+        self.canvas.create_line(x, 0, x, self.canvas.winfo_height(), fill="red", tags="lines")
+        self.canvas.create_line(0, y, self.canvas.winfo_width(), y, fill="red", tags="lines")
 
     def capture_click(self, event):
         if self.image:
@@ -264,38 +272,6 @@ class ImageViewer:
         self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
 
-    def load_masked_points(self):
-        original_image = Image.open(self.file_path)
-        colored_image = original_image.copy()
-    
-        project_folder = os.path.join("Projects", self.top_buttons.project_name_entry.get())
-        curr_class_index = self.right_buttons.class_listbox.curselection()
-        try:
-            curr_class = self.class_names[curr_class_index[0]]
-        except:
-            messagebox.showerror("Error", f"Please select a class first")
-        class_folder = os.path.join(project_folder, curr_class)
-        mask_list = os.listdir(class_folder)
-        mask_list = [mm for mm in mask_list if ".json" in mm]
-        # clicked_points_temp = []
-        for mm in mask_list:
-            mask_json_path = os.path.join(class_folder, mm)
-            mask_dict = self.read_saved_mask(mask_json_path)
-            mask_temp = np.array(mask_dict["mask"])
-            mask_array = (mask_temp > 0).astype(np.uint8) * 255
-            color = (0, 255, 0)  # (R, G, B)
-            mask_image = Image.fromarray(mask_array)
-            
-            colored_image.paste(Image.new("RGB", colored_image.size, color), mask=mask_image)
-
-        width = int(colored_image.width * self.zoom_factor)
-        height = int(colored_image.height * self.zoom_factor)
-        img = colored_image.resize((width, height), Image.LANCZOS)
-        
-        self.image = ImageTk.PhotoImage(img)
-        self.canvas.delete("all")
-        self.canvas.create_image(self.x_position, self.y_position, anchor=tk.NW, image=self.image)
-        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
 
 
@@ -392,12 +368,42 @@ class ImageViewer:
         self.right_buttons.class_listbox.delete(0, tk.END)  # Clear the listbox
         for name in self.class_names:
             self.right_buttons.class_listbox.insert(tk.END, name)
-
-
-
-
     
     def read_saved_mask(self, mask_json_path):
         with open(mask_json_path, 'r') as json_file:
             mask_dict = json.load(json_file)
         return mask_dict
+
+    
+    def load_masked_points(self):
+        original_image = Image.open(self.file_path)
+        colored_image = original_image.copy()
+    
+        project_folder = os.path.join("Projects", self.top_buttons.project_name_entry.get())
+        curr_class_index = self.right_buttons.class_listbox.curselection()
+        try:
+            curr_class = self.class_names[curr_class_index[0]]
+        except:
+            messagebox.showerror("Error", f"Please select a class first")
+        class_folder = os.path.join(project_folder, curr_class)
+        mask_list = os.listdir(class_folder)
+        mask_list = [mm for mm in mask_list if ".json" in mm]
+        # clicked_points_temp = []
+        for mm in mask_list:
+            mask_json_path = os.path.join(class_folder, mm)
+            mask_dict = self.read_saved_mask(mask_json_path)
+            mask_temp = np.array(mask_dict["mask"])
+            mask_array = (mask_temp > 0).astype(np.uint8) * 255
+            color = (0, 255, 0)  # (R, G, B)
+            mask_image = Image.fromarray(mask_array)
+            
+            colored_image.paste(Image.new("RGB", colored_image.size, color), mask=mask_image)
+
+        width = int(colored_image.width * self.zoom_factor)
+        height = int(colored_image.height * self.zoom_factor)
+        img = colored_image.resize((width, height), Image.LANCZOS)
+        
+        self.image = ImageTk.PhotoImage(img)
+        self.canvas.delete("all")
+        self.canvas.create_image(self.x_position, self.y_position, anchor=tk.NW, image=self.image)
+        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
