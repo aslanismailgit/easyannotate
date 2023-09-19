@@ -28,6 +28,7 @@ class ImageViewer:
         self.zoom_factor = 1.0
         self.image = None
         self.file_path = None
+        self.image_name = None
         self.image_height = None
         self.image_width = None
         self.x_position = 0
@@ -105,6 +106,7 @@ class ImageViewer:
         self.file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.png *.bmp *.gif")],
                                                     initialdir=".")
         if self.file_path:
+            self.image_name = os.path.basename(self.file_path)
             img = Image.open(self.file_path)
             self.image = ImageTk.PhotoImage(img)
             self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
@@ -313,9 +315,9 @@ class ImageViewer:
         mask_path = os.path.join(class_folder, mask_name)
         mask_path_png = os.path.join(class_folder, mask_name_png)
         # mask_loaded = np.load('mask.npy')
-        image_name_temp = os.path.basename(self.file_path)
+        # image_name_temp = os.path.basename(self.file_path)
         mask_dict = {"class" : curr_class, 
-                    "image_name" : image_name_temp,
+                    "image_name" : self.image_name,
                     "point": (self.clicked_x_original,self.clicked_y_original),
                     "mask" : self.mask.tolist(),
                     }
@@ -392,6 +394,9 @@ class ImageViewer:
         for mm in mask_list:
             mask_json_path = os.path.join(class_folder, mm)
             mask_dict = self.read_saved_mask(mask_json_path)
+            temp_image_name = mask_dict["image_name"]
+            if temp_image_name!=self.image_name:
+                continue
             mask_temp = np.array(mask_dict["mask"])
             mask_array = (mask_temp > 0).astype(np.uint8) * 255
             color = (0, 255, 0)  # (R, G, B)
