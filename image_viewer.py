@@ -2,12 +2,15 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from buttons import TopButtons, LeftButtons, RightButtons, BottomButtons
+from ouput_formats import YoloTextOut
 
 import numpy as np
 import cv2
 import os
 import json
 import shutil
+import string
+import random
 
 import torch
 import torchvision
@@ -29,6 +32,7 @@ class ImageViewer:
         self.image = None
         self.file_path = None
         self.image_name = None
+        self.image_project_path = None
         self.image_height = None
         self.image_width = None
         self.x_position = 0
@@ -38,7 +42,6 @@ class ImageViewer:
         self.xyxy = []
         self.xyxy4draw = []
         self.masked_points = []
-
         self.model_type = None 
         self.sam_checkpoint = None
         self.predictor = None
@@ -47,10 +50,27 @@ class ImageViewer:
         self.scores = None
         self.logits = None
         self.mask = None
-
         self.class_names = []
+        self.valid_extensions = ['.jpg', '.jpeg', '.png', '.gif'] 
 
         self.create_ui()
+
+    def create_yolo_text_out(self):
+        from ouput_formats import YoloTextOut
+
+        yolo_text_out = YoloTextOut()
+ 
+        project_name = self.top_buttons.project_name_entry.get()
+        self.project_folder = f"Projects/{project_name}/"
+        if len(self.class_names)==0:
+            class_names = os.listdir(self.project_folder) 
+            class_names = [f for f in class_names  if not f.endswith(tuple(self.valid_extensions))]
+
+        yolo_text_out.prep_yolo_out_dir(project_name, self.project_folder, self.valid_extensions)
+        yolo_text_out.create_classes_text(f"yolo/{project_name}/", self.class_names)
+        yolo_text_out.save_as_yolo_text(self.project_folder, self.class_names)
+        messagebox.showinfo("Info", f"Check this folder: /yolo/{project_name}/")
+
 
     def create_project_folder(self):
         if not os.path.exists("Projects"):
@@ -186,7 +206,6 @@ class ImageViewer:
             else:
                 self.add_dot_at_clicked_point()
 
-
     def draw_box(self):
         self.canvas.create_rectangle(self.xyxy4draw)
     
@@ -199,8 +218,12 @@ class ImageViewer:
         if "vit_h" in self.sam_checkpoint:
             self.model_type = "vit_h"
         
-    def create_embeddings(self):
-        sam = sam_model_registry[self.model_type](checkpoint=self.sam_checkpoint)
+    def create_embeddings(self):       
+        try:
+            sam = sam_model_registry[self.model_type](checkpoint=self.sam_checkpoint)
+        except:
+            messagebox.showerror("Error", f"Select model first")
+            return
 
         if torch.cuda.is_available():
             print("CUDA is available:", torch.cuda.is_available())
@@ -211,7 +234,7 @@ class ImageViewer:
         self.predictor = SamPredictor(sam)
         self.predictor.set_image(img)
         self.image_embedding = self.predictor.get_image_embedding().cpu().numpy()
-        messagebox.showinfo("Info", f"Embeddings Created - {self.image_embedding.shape}")
+        messagebox.showinfo("Info", f"Embeddings Created For This Image - {self.image_embedding.shape}")
 
     def get_preds_point(self):
         x, y = self.clicked_x_original, self.clicked_y_original
@@ -225,7 +248,6 @@ class ImageViewer:
                                         point_coords=input_point,
                                         point_labels=input_label)
         
-
     def get_preds_box(self):
         if len(self.xyxy)!=2:
             messagebox.showerror("Error", f"Please draw a rectangle first")
@@ -236,7 +258,6 @@ class ImageViewer:
                                 box=input_box,
                                 point_labels=input_label)
        
-
     def get_mask(self):
         if self.left_buttons.selected_option.get()=="point":
             self.get_preds_point()
@@ -253,6 +274,43 @@ class ImageViewer:
         self.mask = self.mask.astype(np.uint8)
         
         self.show_masked_image()
+
+    def show_polygon(self):
+        print("edit mask")
+        img = cv2.imread(self.file_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB format
+
+        _, binary_mask = cv2.threshold(self.mask, 0, 255, cv2.THRESH_BINARY)
+        # Find contours in the binary mask
+        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Assuming there is only one contour, you can access it
+        
+        print("len(contours) :", len(contours))
+        if len(contours) > 0:
+            largest_contour = max(contours, key=cv2.contourArea)
+            
+            # Approximate the contour to get a polygon
+            epsilon = 0.0051 * cv2.arcLength(largest_contour, True)
+            approx_polygon = cv2.approxPolyDP(largest_contour, epsilon, True)
+            
+            mask_with_polygon = cv2.drawContours(img, 
+                                                [approx_polygon], 
+                                                -1, 
+                                                (0, 255, 0), 2)
+            
+            for point in approx_polygon:
+                x, y = point[0]
+                cv2.circle(mask_with_polygon, (x, y), 5, (0, 255, 0), -1)
+        
+        mask_with_polygon = Image.fromarray(mask_with_polygon)
+        width = int(mask_with_polygon.width * self.zoom_factor)
+        height = int(mask_with_polygon.height * self.zoom_factor)
+        img = mask_with_polygon.resize((width, height), Image.LANCZOS)
+        
+        self.image = ImageTk.PhotoImage(img)
+        self.canvas.delete("all")
+        self.canvas.create_image(self.x_position, self.y_position, anchor=tk.NW, image=self.image)
+        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
     def show_masked_image(self):
         original_image = Image.open(self.file_path)
@@ -273,10 +331,6 @@ class ImageViewer:
         self.canvas.create_image(self.x_position, self.y_position, anchor=tk.NW, image=self.image)
         self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
-
-
-
-
     def add_dot_at_clicked_point(self):
         if self.clicked_x_original is not None:
             x = self.clicked_x_original * self.zoom_factor + self.x_position
@@ -296,22 +350,31 @@ class ImageViewer:
     def save_mask(self):
         project_folder = os.path.join("Projects", 
                                       self.top_buttons.project_name_entry.get())
+        
         curr_class_index = self.right_buttons.class_listbox.curselection()
         try:
             curr_class = self.class_names[curr_class_index[0]]
         except:
             messagebox.showerror("Error", f"Please select a class first")
             return
+        
+        # save image for future labelling
+        img = cv2.imread(self.file_path)
+        self.image_project_path = os.path.join(project_folder, self.image_name)
+        print(self.image_project_path)
+        if not os.path.exists(self.image_project_path):
+            cv2.imwrite(self.image_project_path, img)
 
         class_folder = os.path.join(project_folder, curr_class)
         mask_ids = os.listdir(class_folder)
+        mask_ids = [m for m in mask_ids if ".json" in m]
         if len(mask_ids)>0:
-            mask_ids = [int(m.split("_")[0]) for m in mask_ids]
+            mask_ids = [int(m.split("_")[-1].split(".")[0]) for m in mask_ids]
             mask_id = np.max(mask_ids) + 1
         else:
             mask_id = 0
-        mask_name = f"{mask_id}_mask.json"
-        mask_name_png = f"{mask_id}_mask.png"
+        mask_name = f"{self.image_name.split('.')[0]}_mask_{mask_id:05d}.json"
+        mask_name_png = f"{self.image_name.split('.')[0]}_mask_{mask_id:05d}.png"
         mask_path = os.path.join(class_folder, mask_name)
         mask_path_png = os.path.join(class_folder, mask_name_png)
         # mask_loaded = np.load('mask.npy')
@@ -332,7 +395,15 @@ class ImageViewer:
         messagebox.showinfo("Info", f"Mask saved - Class: {curr_class}")
 
 
+    # -------  helper functions ------
+
+    def read_saved_mask(self, mask_json_path):
+        with open(mask_json_path, 'r') as json_file:
+            mask_dict = json.load(json_file)
+        return mask_dict
+    
     # -------  right buttons ------
+
     def update_class_list(self):
         self.right_buttons.class_listbox.delete(0, tk.END)  # Clear the listbox
         for name in self.class_names:
@@ -348,7 +419,7 @@ class ImageViewer:
 
             class_folder = os.path.join(project_folder, class_name)
             if not os.path.exists(class_folder):
-                os.mkdir(class_folder)  # Create the parent folder if it doesn't exist        
+                os.mkdir(class_folder)        
             self.class_names.append(class_name)
             self.right_buttons.class_name_entry.delete(0, tk.END)  # Clear the entry field
             self.update_class_list()
@@ -367,15 +438,10 @@ class ImageViewer:
     def load_old_class_list(self):
         project_folder = os.path.join("Projects", self.top_buttons.project_name_entry.get())
         self.class_names = os.listdir(project_folder)
+        self.class_names = [f for f in self.class_names  if not f.endswith(tuple(self.valid_extensions))]
         self.right_buttons.class_listbox.delete(0, tk.END)  # Clear the listbox
         for name in self.class_names:
             self.right_buttons.class_listbox.insert(tk.END, name)
-    
-    def read_saved_mask(self, mask_json_path):
-        with open(mask_json_path, 'r') as json_file:
-            mask_dict = json.load(json_file)
-        return mask_dict
-
     
     def load_masked_points(self):
         original_image = Image.open(self.file_path)
@@ -412,3 +478,5 @@ class ImageViewer:
         self.canvas.delete("all")
         self.canvas.create_image(self.x_position, self.y_position, anchor=tk.NW, image=self.image)
         self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
+
+

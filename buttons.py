@@ -82,6 +82,10 @@ class LeftButtons:
                                              )
         self.get_mask_button.pack(side=tk.TOP, pady=10)
 
+        self.get_mask_button = tk.Button(self.frame, text="Show Polygon", 
+                                             command=self.image_viewer.show_polygon,
+                                             )
+        self.get_mask_button.pack(side=tk.TOP, pady=10)
 
         self.save_mask_button = tk.Button(self.frame, text="Save Mask",
                                                   command=self.image_viewer.save_mask)
@@ -107,7 +111,7 @@ class RightButtons:
         self.remove_class_button = tk.Button(self.frame, text="Remove Class", 
                                           command=self.image_viewer.remove_class)
         self.remove_class_button.pack(side=tk.TOP, pady=10)
-
+ 
         self.class_listbox = tk.Listbox(self.frame)
         self.class_listbox.pack(side=tk.TOP, pady=10)
 
@@ -119,3 +123,6 @@ class RightButtons:
                                           command=self.image_viewer.load_masked_points)
         self.load_saved_masks_button.pack(side=tk.TOP, pady=10)
 
+        self.load_saved_masks_button = tk.Button(self.frame, text="Create Yolo Text Annotations", 
+                                          command=self.image_viewer.create_yolo_text_out)
+        self.load_saved_masks_button.pack(side=tk.TOP, pady=10)
