@@ -10,6 +10,7 @@ With this UI, I get the user input either in the form of input point or bounding
 - Efficient and accurate segmentation using SAM.
 - Save binary masks for selected objects.
 - A flexible baseline for custom segmentation tasks.
+- YOLO txt format
 
 ## Usage
 
@@ -38,6 +39,9 @@ https://github.com/facebookresearch/segment-anything#model-checkpoints
 
 reload image if required
 
+Now YOLO txt format is available !!!
+
+<img src="screens/screen0.png" alt="Image 1" width="600" />
 <img src="screens/screen1.png" alt="Image 1" width="600" />
 <img src="screens/screen2.png" alt="Image 1" width="600" />
 <img src="screens/screen3.png" alt="Image 1" width="600" />
